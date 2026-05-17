@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ShopEase</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;min-height:100vh}
+a{text-decoration:none;color:inherit}
+button{cursor:pointer;border:none;font-family:inherit}
+
+nav{background:#111114;color:#fff;padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100}
+.nav-brand{font-size:1.4rem;font-weight:700;color:#d90d2f;letter-spacing:1px}
+.nav-links{display:flex;gap:1.5rem;align-items:center}
+.nav-links span{cursor:pointer;font-size:.9rem;opacity:.85;transition:.2s}
+.nav-links span:hover{opacity:1;color:#d90d2f}
+.cart-btn{background:#d90d2f;color:#fff;padding:.45rem 1rem;border-radius:20px;font-size:.85rem;display:flex;align-items:center;gap:.4rem;cursor:pointer;border:none;font-family:inherit}
+.cart-count{background:#fff;color:#d90d2f;border-radius:50%;width:18px;height:18px;font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+
+.hero{background:linear-gradient(360deg,#111114 60%,#d90d2f);color:#fff;padding:4rem 2rem;text-align:center}
+.hero h1{font-size:2.5rem;font-weight:700;margin-bottom:.8rem}
+.hero p{opacity:.8;font-size:1.1rem;margin-bottom:1.5rem}
+.hero-btn{background:#d90d2f;color:#fff;padding:.7rem 2rem;border-radius:25px;font-size:1rem;font-weight:600;cursor:pointer;border:none;transition:.2s}
+.hero-btn:hover{background:#c73652}
+
+.toolbar{display:flex;gap:1rem;padding:1.5rem 2rem;flex-wrap:wrap;align-items:center;background:#fff;border-bottom:1px solid #eee}
+.search-box{flex:1;min-width:200px;display:flex;border:1.5px solid #ddd;border-radius:8px;overflow:hidden}
+.search-box input{flex:1;padding:.55rem 1rem;border:none;outline:none;font-size:.9rem}
+.search-box button{background:#d90d2f;color:#fff;padding:.55rem 1rem;border:none;cursor:pointer}
+.filter-select{padding:.55rem 1rem;border:1.5px solid #ddd;border-radius:8px;font-size:.9rem;background:#fff;cursor:pointer;outline:none}
+
+.section-title{padding:1.5rem 2rem .5rem;font-size:1.2rem;font-weight:600;color:#333}
+.products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1.4rem;padding:0 2rem 2rem}
+.product-card{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);transition:.25s;cursor:pointer}
+.product-card:hover{transform:translateY(-5px);box-shadow:0 12px 28px rgba(0,0,0,.12)}
+.product-img{width:100%;height:210px;object-fit:cover;display:block;background:#f0f0e8}
+.product-info{padding:1rem}
+.product-name{font-weight:600;font-size:.95rem;margin-bottom:.3rem;color:#222}
+.product-category{font-size:.72rem;color:#d90d2f;text-transform:uppercase;letter-spacing:.6px;margin-bottom:.4rem}
+.product-price{font-size:1.1rem;font-weight:700;color:#111114;margin-bottom:.6rem}
+.product-rating{font-size:.8rem;color:#f5a623;margin-bottom:.8rem}
+.add-cart-btn{width:100%;background:#111114;color:#fff;padding:.55rem;border-radius:8px;font-size:.85rem;font-weight:600;transition:.2s;border:none;cursor:pointer}
+.add-cart-btn:hover{background:#d90d2f}
+
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:flex;align-items:center;justify-content:center;padding:1rem}
+.modal{background:#fff;border-radius:16px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:1.2rem 1.5rem;border-bottom:1px solid #eee}
+.modal-header h2{font-size:1.15rem;font-weight:600}
+.close-btn{background:none;border:none;font-size:1.4rem;cursor:pointer;color:#888}
+
+.pd-img{width:100%;height:260px;object-fit:cover;display:block}
+.pd-body{padding:1.5rem}
+.pd-name{font-size:1.25rem;font-weight:700;margin-bottom:.4rem}
+.pd-cat{color:#d90d2f;font-size:.8rem;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.6rem}
+.pd-price{font-size:1.6rem;font-weight:700;color:#111114;margin-bottom:.8rem}
+.pd-desc{color:#555;font-size:.9rem;line-height:1.65;margin-bottom:1.2rem}
+.pd-stock{font-size:.85rem;margin-bottom:1rem}
+.stock-ok{color:#22a55a}
+.qty-control{display:flex;align-items:center;gap:.8rem;margin-bottom:1.2rem}
+.qty-btn{width:32px;height:32px;border-radius:50%;background:#f0f0f0;border:none;font-size:1.1rem;cursor:pointer;font-weight:700;transition:.2s}
+.qty-btn:hover{background:#d90d2f;color:#fff}
+.qty-val{font-size:1rem;font-weight:600;min-width:24px;text-align:center}
+.pd-add-btn{width:100%;background:#d90d2f;color:#fff;padding:.75rem;border-radius:10px;font-size:1rem;font-weight:600;border:none;cursor:pointer;transition:.2s}
+.pd-add-btn:hover{background:#c73652}
+
+.cart-modal{max-width:480px}
+.cart-item{display:flex;align-items:center;gap:1rem;padding:1rem 1.5rem;border-bottom:1px solid #f0f0e8}
+.cart-item-img{width:55px;height:55px;object-fit:cover;border-radius:8px;background:#f0f0e8;flex-shrink:0}
+.cart-item-info{flex:1}
+.cart-item-name{font-weight:600;font-size:.9rem}
+.cart-item-price{color:#d90d2f;font-size:.85rem;margin-top:.2rem}
+.cart-item-qty{display:flex;align-items:center;gap:.5rem;margin-top:.4rem}
+.cq-btn{width:24px;height:24px;border-radius:50%;background:#f0f0f0;border:none;cursor:pointer;font-weight:700;font-size:.85rem}
+.cq-btn:hover{background:#d90d2f;color:#fff}
+.cart-remove{background:none;border:none;color:#ccc;cursor:pointer;font-size:1rem}
+.cart-remove:hover{color:#d90d2f}
+.cart-summary{padding:1.5rem;border-top:2px solid #f0f0e8}
+.cart-total-row{display:flex;justify-content:space-between;font-size:1rem;margin-bottom:1rem}
+.cart-total-row strong{font-weight:700;font-size:1.1rem}
+.checkout-btn{width:100%;background:#111114;color:#fff;padding:.75rem;border-radius:10px;font-size:1rem;font-weight:600;border:none;cursor:pointer;transition:.2s}
+.checkout-btn:hover{background:#d90d2f}
+.empty-cart{padding:3rem;text-align:center;color:#aaa;font-size:.95rem}
+
+.auth-tabs{display:flex;border-bottom:2px solid #f0f0f0}
+.auth-tab{flex:1;padding:.9rem;text-align:center;cursor:pointer;font-weight:600;font-size:.9rem;color:#888;transition:.2s}
+.auth-tab.active{color:#d90d2f;border-bottom:2px solid #d90d2f;margin-bottom:-2px}
+.auth-body{padding:1.5rem}
+.form-group{margin-bottom:1rem}
+.form-group label{display:block;font-size:.85rem;font-weight:600;margin-bottom:.4rem;color:#444}
+.form-group input{width:100%;padding:.6rem .9rem;border:1.5px solid #ddd;border-radius:8px;font-size:.9rem;outline:none;transition:.2s}
+.form-group input:focus{border-color:#d90d2f}
+.auth-submit{width:100%;background:#d90d2f;color:#fff;padding:.75rem;border-radius:10px;font-size:1rem;font-weight:600;border:none;cursor:pointer;margin-top:.5rem;transition:.2s}
+.auth-submit:hover{background:#c73652}
+.auth-msg{font-size:.8rem;color:#22a55a;text-align:center;margin-top:.8rem;display:block}
+.auth-err{color:#d90d2f}
+
+.checkout-modal{max-width:500px}
+.checkout-form{padding:1.5rem}
+.section-hdr{font-size:.95rem;font-weight:700;color:#333;margin-bottom:.8rem;padding-bottom:.4rem;border-bottom:1px solid #eee}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+.order-summary-mini{background:#f8f8f5;border-radius:8px;padding:1rem;margin:1rem 0}
+.order-line{display:flex;justify-content:space-between;font-size:.85rem;padding:.3rem 0;color:#555}
+.order-line.total{font-weight:700;color:#111114;border-top:1px solid #ddd;padding-top:.6rem;margin-top:.3rem}
+.place-order-btn{width:100%;background:#22a55a;color:#fff;padding:.8rem;border-radius:10px;font-size:1rem;font-weight:700;border:none;cursor:pointer;transition:.2s}
+.place-order-btn:hover{background:#1a8a49}
+
+.success-modal{max-width:380px;text-align:center;padding-bottom:2rem}
+.success-icon{font-size:4rem;margin:2rem 0 1rem}
+.success-modal h2{font-size:1.3rem;font-weight:700;margin-bottom:.5rem}
+.success-modal p{color:#666;font-size:.9rem;margin-bottom:1.5rem;padding:0 1rem}
+.success-modal button{background:#d90d2f;color:#fff;padding:.65rem 2rem;border-radius:20px;font-size:.9rem;font-weight:600;border:none;cursor:pointer}
+
+.toast{position:fixed;bottom:2rem;right:2rem;background:#111114;color:#fff;padding:.8rem 1.3rem;border-radius:10px;font-size:.9rem;z-index:999;transform:translateY(20px);opacity:0;transition:.3s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+.t-icon{color:#22a55a;margin-right:.5rem}
+
+.user-badge{display:flex;align-items:center;gap:.5rem;font-size:.85rem;cursor:pointer}
+.user-avatar{width:30px;height:30px;border-radius:50%;background:#d90d2f;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.75rem}
+.loading{text-align:center;padding:3rem;color:#888;font-size:.95rem;grid-column:1/-1}
+.spinner{display:inline-block;width:30px;height:30px;border:3px solid #eee;border-top-color:#d90d2f;border-radius:50%;animation:spin .7s linear infinite;margin-bottom:1rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">ShopEase</div>
+  <div class="nav-links">
+    <span onclick="loadProducts()">Home</span>
+    <span onclick="loadProducts()">Products</span>
+    <div id="auth-area"><span onclick="openModal('auth')">Login / Register</span></div>
+    <div class="cart-btn" onclick="openModal('cart')">
+      🛒 Cart <span class="cart-count" id="cart-count">0</span>
+    </div>
+  </div>
+</nav>
+
+<div class="hero">
+  <h1>Discover What’s Worth Buying</h1>
+  <p>Curated trends, quality picks, and free shipping over $50</p>
+  <button class="hero-btn" onclick="document.querySelector('.products-grid').scrollIntoView({behavior:'smooth'})">Shop Now</button>
+</div>
+
+<div class="toolbar">
+  <div class="search-box">
+    <input type="text" id="search-input" placeholder="Search products..." oninput="filterProducts()"/>
+    <button onclick="filterProducts()">🔍</button>
+  </div>
+  <select class="filter-select" id="cat-filter" onchange="filterProducts()">
+    <option value="">All Categories</option>
+    <option value="electronics">Electronics</option>
+    <option value="fashion">Fashion</option>
+    <option value="home">Home &amp; Living</option>
+    <option value="sports">Sports</option>
+    <option value="beauty">Beauty</option>
+  </select>
+  <select class="filter-select" id="sort-filter" onchange="filterProducts()">
+    <option value="">Sort By</option>
+    <option value="price-asc">Price: Low to High</option>
+    <option value="price-desc">Price: High to Low</option>
+    <option value="rating">Top Rated</option>
+    <option value="newest">Newest</option>
+  </select>
+</div>
+
+<div class="section-title">Featured Products</div>
+<div class="products-grid" id="products-grid">
+  <div class="loading"><div class="spinner"></div><br>Loading products...</div>
+</div>
+
+<!-- PRODUCT DETAIL MODAL -->
+<div class="modal-bg" id="modal-product" style="display:none">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <h2>Product Details</h2>
+      <button class="close-btn" onclick="closeModal('product')">✕</button>
+    </div>
+    <div id="pd-content"></div>
+  </div>
+</div>
+
+<!-- CART MODAL -->
+<div class="modal-bg" id="modal-cart" style="display:none">
+  <div class="modal cart-modal">
+    <div class="modal-header">
+      <h2>Your Cart</h2>
+      <button class="close-btn" onclick="closeModal('cart')">✕</button>
+    </div>
+    <div id="cart-content"></div>
+  </div>
+</div>
+
+<!-- AUTH MODAL -->
+<div class="modal-bg" id="modal-auth" style="display:none">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h2 id="auth-title">Welcome Back</h2>
+      <button class="close-btn" onclick="closeModal('auth')">✕</button>
+    </div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="tab-login" onclick="switchAuth('login')">Login</div>
+      <div class="auth-tab" id="tab-register" onclick="switchAuth('register')">Register</div>
+    </div>
+    <div class="auth-body" id="auth-form-area"></div>
+  </div>
+</div>
+
+<!-- CHECKOUT MODAL -->
+<div class="modal-bg" id="modal-checkout" style="display:none">
+  <div class="modal checkout-modal">
+    <div class="modal-header">
+      <h2>Checkout</h2>
+      <button class="close-btn" onclick="closeModal('checkout')">✕</button>
+    </div>
+    <div class="checkout-form" id="checkout-content"></div>
+  </div>
+</div>
+
+<!-- SUCCESS MODAL -->
+<div class="modal-bg" id="modal-success" style="display:none">
+  <div class="modal success-modal">
+    <div class="success-icon">🎉</div>
+    <h2>Order Placed!</h2>
+    <p>Thank you for your purchase. Your order has been received and is being processed.</p>
+    <button onclick="closeModal('success');resetCart()">Continue Shopping</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span class="t-icon">✓</span><span id="toast-msg"></span></div>
+
+<script>
+const API = 'http://localhost:5000/api';
+
+// ── LOCAL PRODUCTS with real images ──────────────────────────
+const LOCAL_PRODUCTS = [
+  {
+    _id:'1', name:'Fujifilm X-T30 II Camera',
+    category:{name:'Electronics',slug:'electronics'},
+    price:849.99, stock:10, rating:4.9, reviews_count:218,
+    image:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=600&q=80',
+    description:'A compact mirrorless camera with a retro design and 26.1MP X-Trans CMOS 4 sensor. Features 4K video, film simulations, and a fast hybrid autofocus — perfect for travel and street photography.'
+  },
+  {
+    _id:'2', name:'Over-Ear Noise Cancelling Headphones',
+    category:{name:'Electronics',slug:'electronics'},
+    price:199.99, stock:25, rating:4.8, reviews_count:342,
+    image:'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&q=80',
+    description:'Premium wireless headphones with active noise cancellation and deep, immersive sound. Includes a sleek aluminum stand, 30-hour battery life, and memory foam ear cushions for all-day comfort.'
+  },
+  {
+    _id:'3', name:'Classic Cotton T-Shirt Set',
+    category:{name:'Fashion',slug:'fashion'},
+    price:39.99, stock:80, rating:4.6, reviews_count:512,
+    image:'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80',
+    description:'A set of two premium 100% cotton crew-neck t-shirts in olive green and navy blue. Pre-washed for softness, with a relaxed fit that works for any casual occasion. Available in sizes S–XXL.'
+  },
+  {
+    _id:'4', name:'Leather Crossbody Satchel Bag',
+    category:{name:'Fashion',slug:'fashion'},
+    price:89.99, stock:30, rating:4.7, reviews_count:176,
+    image:'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=600&q=80',
+    description:'A timeless tan leather crossbody bag with gold-tone push-lock closure and adjustable strap. Features a spacious main compartment, inner zip pocket, and smooth genuine leather finish — perfect for everyday use.'
+  },
+  {
+    _id:'5', name:'Ceramic Pour-Over Coffee Set',
+    category:{name:'Home',slug:'home'},
+    price:54.99, stock:40, rating:4.8, reviews_count:134,
+    image:'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&q=80',
+    description:'A minimalist ceramic pour-over dripper and mug set resting on a natural oak tray. Crafted from food-safe matte ceramic, this set brews a smooth, rich cup of coffee and looks stunning on any countertop.'
+  },
+  {
+    _id:'6', name:'Sage Green Knit Throw Blanket',
+    category:{name:'Home',slug:'home'},
+    price:49.99, stock:35, rating:4.9, reviews_count:89,
+    image:'https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?w=600&q=80',
+    description:'A soft waffle-knit throw blanket in calming sage green. Made from 100% organic cotton, it is lightweight yet warm — ideal for draping over a sofa, armchair, or bed for that cozy, Scandinavian aesthetic.'
+  },
+  {
+    _id:'7', name:'Smart Insulated Water Bottle',
+    category:{name:'Sports',slug:'sports'},
+    price:64.99, stock:50, rating:4.7, reviews_count:403,
+    image:'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600&q=80',
+    description:'A sleek matte black smart water bottle with a hydration tracker display. Double-wall vacuum insulation keeps drinks cold for 24 hours or hot for 12. Leak-proof lid and BPA-free stainless steel body — built for the gym and beyond.'
+  },
+  {
+    _id:'8', name:'Resistance Band Set',
+    category:{name:'Sports',slug:'sports'},
+    price:29.99, stock:60, rating:4.6, reviews_count:671,
+    image:'https://images.unsplash.com/photo-1598289431512-b97b0917affc?w=600&q=80',
+    description:'A set of 4 heavy-duty loop resistance bands in varying strengths — light, medium, heavy, and extra heavy. Perfect for strength training, stretching, yoga, and physical therapy. Made from natural latex with anti-slip texture.'
+  },
+  {
+    _id:'9', name:'Avocado Face Oil & Cream Set',
+    category:{name:'Beauty',slug:'beauty'},
+    price:44.99, stock:45, rating:4.9, reviews_count:97,
+    image:'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=600&q=80',
+    description:'A luxurious skincare duo featuring cold-pressed avocado face oil in an amber dropper bottle and a rich avocado moisturizing cream in a bamboo jar. 100% natural, vegan, and suitable for all skin types. Deeply nourishes and brightens skin overnight.'
+  },
+  {
+    _id:'10', name:'Natural Mineral Makeup Kit',
+    category:{name:'Beauty',slug:'beauty'},
+    price:59.99, stock:38, rating:4.7, reviews_count:254,
+    image:'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=600&q=80',
+    description:'A complete nude-toned mineral makeup set including a loose setting powder, blush, a fluffy powder brush, and a creamy satin lipstick. Formulated without parabens or synthetic fragrances — light, buildable coverage for a natural, glowing finish.'
+  },
+];
+
+let allProducts = [...LOCAL_PRODUCTS];
+let cart        = [];
+let currentUser = null;
+let pdQty       = 1;
+let currentProduct = null;
+
+const stars = r => '★'.repeat(Math.round(r)) + '☆'.repeat(5 - Math.round(r));
+const tkn   = () => localStorage.getItem('token');
+const authH = () => ({ 'Content-Type':'application/json', 'Authorization':'Bearer '+tkn() });
+
+// ── PRODUCTS ─────────────────────────────────────────────────
+function loadProducts() {
+  allProducts = [...LOCAL_PRODUCTS];
+  renderProducts(allProducts);
+}
+
+function renderProducts(list) {
+  const grid = document.getElementById('products-grid');
+  if (!list.length) {
+    grid.innerHTML = `<div class="loading">😕 No products found.</div>`;
+    return;
+  }
+  grid.innerHTML = list.map(p => `
+    <div class="product-card" onclick="openProduct('${p._id}')">
+      <img class="product-img" src="${p.image}" alt="${p.name}" loading="lazy"
+           onerror="this.style.background='#f0f0e8';this.src=''"/>
+      <div class="product-info">
+        <div class="product-category">${p.category?.name || ''}</div>
+        <div class="product-name">${p.name}</div>
+        <div class="product-rating">${stars(p.rating)} (${p.reviews_count})</div>
+        <div class="product-price">$${p.price.toFixed(2)}</div>
+        <button class="add-cart-btn" onclick="event.stopPropagation();addToCart(LOCAL_PRODUCTS.find(x=>x._id==='${p._id}'),1)">Add to Cart</button>
+      </div>
+    </div>`).join('');
+}
+
+function filterProducts() {
+  const q   = document.getElementById('search-input').value.toLowerCase();
+  const cat = document.getElementById('cat-filter').value;
+  const srt = document.getElementById('sort-filter').value;
+
+  let list = LOCAL_PRODUCTS.filter(p => {
+    const mq = p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
+    const mc = !cat || p.category.slug === cat;
+    return mq && mc;
+  });
+
+  if (srt === 'price-asc')  list.sort((a,b) => a.price - b.price);
+  if (srt === 'price-desc') list.sort((a,b) => b.price - a.price);
+  if (srt === 'rating')     list.sort((a,b) => b.rating - a.rating);
+
+  renderProducts(list);
+}
+
+// ── PRODUCT DETAIL ────────────────────────────────────────────
+function openProduct(id) {
+  currentProduct = LOCAL_PRODUCTS.find(p => p._id === id);
+  pdQty = 1;
+  document.getElementById('pd-content').innerHTML = `
+    <img class="pd-img" src="${currentProduct.image}" alt="${currentProduct.name}"/>
+    <div class="pd-body">
+      <div class="pd-cat">${currentProduct.category?.name || ''}</div>
+      <div class="pd-name">${currentProduct.name}</div>
+      <div class="product-rating">${stars(currentProduct.rating)} ${currentProduct.rating} (${currentProduct.reviews_count} reviews)</div>
+      <div class="pd-price">$${currentProduct.price.toFixed(2)}</div>
+      <div class="pd-desc">${currentProduct.description}</div>
+      <div class="pd-stock"><span class="stock-ok">✓ In Stock</span> — ${currentProduct.stock} units available</div>
+      <div class="qty-control">
+        <span style="font-size:.9rem;color:#555">Qty:</span>
+        <button class="qty-btn" onclick="changePdQty(-1)">−</button>
+        <span class="qty-val" id="pd-qty">1</span>
+        <button class="qty-btn" onclick="changePdQty(1)">+</button>
+      </div>
+      <button class="pd-add-btn" id="pd-add-btn" onclick="addToCart(currentProduct,pdQty);closeModal('product')">
+        Add to Cart — $${currentProduct.price.toFixed(2)}
+      </button>
+    </div>`;
+  openModal('product');
+}
+
+function changePdQty(d) {
+  pdQty = Math.max(1, Math.min(currentProduct.stock, pdQty + d));
+  document.getElementById('pd-qty').textContent = pdQty;
+  document.getElementById('pd-add-btn').textContent =
+    `Add to Cart — $${(currentProduct.price * pdQty).toFixed(2)}`;
+}
+
+// ── CART ──────────────────────────────────────────────────────
+function addToCart(product, qty) {
+  const ex = cart.find(x => x._id === product._id);
+  if (ex) ex.qty += qty;
+  else cart.push({...product, qty});
+  updateCartCount();
+  showToast(`${product.name} added to cart`);
+}
+
+function updateCartCount() {
+  document.getElementById('cart-count').textContent = cart.reduce((a,x) => a + x.qty, 0);
+}
+
+function renderCart() {
+  const el = document.getElementById('cart-content');
+  if (!cart.length) { el.innerHTML = `<div class="empty-cart">🛒<br><br>Your cart is empty</div>`; return; }
+  const total = cart.reduce((a,x) => a + x.price * x.qty, 0);
+  const ship  = total >= 50 ? 0 : 5.99;
+  el.innerHTML = cart.map(x => `
+    <div class="cart-item">
+      <img class="cart-item-img" src="${x.image}" alt="${x.name}"/>
+      <div class="cart-item-info">
+        <div class="cart-item-name">${x.name}</div>
+        <div class="cart-item-price">$${x.price.toFixed(2)} each</div>
+        <div class="cart-item-qty">
+          <button class="cq-btn" onclick="changeCartQty('${x._id}',-1)">−</button>
+          <span>${x.qty}</span>
+          <button class="cq-btn" onclick="changeCartQty('${x._id}',1)">+</button>
+        </div>
+      </div>
+      <div>
+        <div style="font-weight:700;font-size:.9rem;margin-bottom:.5rem">$${(x.price*x.qty).toFixed(2)}</div>
+        <button class="cart-remove" onclick="removeFromCart('${x._id}')">✕</button>
+      </div>
+    </div>`).join('') + `
+    <div class="cart-summary">
+      <div class="cart-total-row">
+        <span>Subtotal (${cart.reduce((a,x)=>a+x.qty,0)} items)</span>
+        <strong>$${total.toFixed(2)}</strong>
+      </div>
+      ${ship > 0
+        ? `<div style="font-size:.8rem;color:#d90d2f;margin-bottom:.8rem">Add $${(50-total).toFixed(2)} more for free shipping</div>`
+        : `<div style="font-size:.8rem;color:#22a55a;margin-bottom:.8rem">✓ You qualify for free shipping!</div>`}
+      <button class="checkout-btn" onclick="closeModal('cart');openCheckout()">Proceed to Checkout</button>
+    </div>`;
+}
+
+function changeCartQty(id, d) {
+  const item = cart.find(x => x._id === id);
+  if (!item) return;
+  item.qty += d;
+  if (item.qty <= 0) cart = cart.filter(x => x._id !== id);
+  updateCartCount(); renderCart();
+}
+function removeFromCart(id) { cart = cart.filter(x => x._id !== id); updateCartCount(); renderCart(); }
+function resetCart() { cart = []; updateCartCount(); }
+
+// ── AUTH ──────────────────────────────────────────────────────
+function switchAuth(mode) {
+  document.getElementById('tab-login').classList.toggle('active', mode==='login');
+  document.getElementById('tab-register').classList.toggle('active', mode==='register');
+  document.getElementById('auth-title').textContent = mode==='login' ? 'Welcome Back' : 'Create Account';
+  const el = document.getElementById('auth-form-area');
+  if (mode === 'login') {
+    el.innerHTML = `
+      <div class="form-group"><label>Email</label><input type="email" id="l-email" placeholder="you@example.com"/></div>
+      <div class="form-group"><label>Password</label><input type="password" id="l-pass" placeholder="••••••••"/></div>
+      <button class="auth-submit" onclick="doLogin()">Login</button>
+      <span class="auth-msg" id="auth-feedback"></span>`;
+  } else {
+    el.innerHTML = `
+      <div class="form-group"><label>Full Name</label><input type="text" id="r-name" placeholder="John Doe"/></div>
+      <div class="form-group"><label>Email</label><input type="email" id="r-email" placeholder="you@example.com"/></div>
+      <div class="form-group"><label>Password</label><input type="password" id="r-pass" placeholder="Min 8 characters"/></div>
+      <div class="form-group"><label>Confirm Password</label><input type="password" id="r-pass2" placeholder="Repeat password"/></div>
+      <button class="auth-submit" onclick="doRegister()">Create Account</button>
+      <span class="auth-msg" id="auth-feedback"></span>`;
+  }
+}
+
+async function doLogin() {
+  const email = document.getElementById('l-email').value;
+  const pass  = document.getElementById('l-pass').value;
+  if (!email||!pass) { setFeedback('Please fill all fields','err'); return; }
+  try {
+    const r = await fetch(`${API}/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
+    const d = await r.json();
+    if (!r.ok) { setFeedback(d.error,'err'); return; }
+    localStorage.setItem('token', d.token);
+    currentUser = d.user;
+    setFeedback('Login successful!','ok');
+    setTimeout(() => { closeModal('auth'); updateAuthArea(); }, 800);
+  } catch { setFeedback('Server error. Is the backend running?','err'); }
+}
+
+async function doRegister() {
+  const name  = document.getElementById('r-name').value;
+  const email = document.getElementById('r-email').value;
+  const pass  = document.getElementById('r-pass').value;
+  const pass2 = document.getElementById('r-pass2').value;
+  if (!name||!email||!pass||!pass2) { setFeedback('Please fill all fields','err'); return; }
+  if (pass !== pass2) { setFeedback('Passwords do not match','err'); return; }
+  if (pass.length < 8) { setFeedback('Password must be 8+ characters','err'); return; }
+  try {
+    const r = await fetch(`${API}/auth/register`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password:pass})});
+    const d = await r.json();
+    if (!r.ok) { setFeedback(d.error,'err'); return; }
+    localStorage.setItem('token', d.token);
+    currentUser = d.user;
+    setFeedback('Account created!','ok');
+    setTimeout(() => { closeModal('auth'); updateAuthArea(); }, 800);
+  } catch { setFeedback('Server error. Is the backend running?','err'); }
+}
+
+function setFeedback(msg, type) {
+  const el = document.getElementById('auth-feedback');
+  el.className = 'auth-msg' + (type==='err' ? ' auth-err' : '');
+  el.textContent = msg;
+}
+
+function updateAuthArea() {
+  const el = document.getElementById('auth-area');
+  if (currentUser) {
+    el.innerHTML = `<div class="user-badge" onclick="logout()">
+      <div class="user-avatar">${currentUser.name[0].toUpperCase()}</div>
+      <span>${currentUser.name}</span></div>`;
+  } else {
+    el.innerHTML = `<span onclick="openModal('auth')">Login / Register</span>`;
+  }
+}
+
+function logout() { localStorage.removeItem('token'); currentUser=null; updateAuthArea(); showToast('Logged out'); }
+
+// ── CHECKOUT ──────────────────────────────────────────────────
+function openCheckout() {
+  if (!cart.length) { showToast('Your cart is empty'); return; }
+  if (!tkn()) { showToast('Please login to place an order'); openModal('auth'); return; }
+  const subtotal = cart.reduce((a,x) => a + x.price*x.qty, 0);
+  const shipping = subtotal >= 50 ? 0 : 5.99;
+  const tax      = subtotal * 0.08;
+  const total    = subtotal + shipping + tax;
+  document.getElementById('checkout-content').innerHTML = `
+    <div class="section-hdr">Shipping Information</div>
+    <div class="form-group"><label>Full Name</label><input type="text" id="c-name" value="${currentUser?.name||''}" placeholder="John Doe"/></div>
+    <div class="form-group"><label>Email</label><input type="email" id="c-email" value="${currentUser?.email||''}" placeholder="you@example.com"/></div>
+    <div class="form-row">
+      <div class="form-group"><label>Address</label><input type="text" id="c-addr" placeholder="123 Main St"/></div>
+      <div class="form-group"><label>City</label><input type="text" id="c-city" placeholder="New York"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>ZIP Code</label><input type="text" id="c-zip" placeholder="10001"/></div>
+      <div class="form-group"><label>Country</label><input type="text" id="c-country" placeholder="United States"/></div>
+    </div>
+    <div class="section-hdr" style="margin-top:1rem">Payment</div>
+    <div class="form-group"><label>Card Number</label><input type="text" id="c-card" placeholder="1234 5678 9012 3456" maxlength="19"/></div>
+    <div class="form-row">
+      <div class="form-group"><label>Expiry</label><input type="text" id="c-exp" placeholder="MM/YY" maxlength="5"/></div>
+      <div class="form-group"><label>CVV</label><input type="text" id="c-cvv" placeholder="123" maxlength="3"/></div>
+    </div>
+    <div class="section-hdr" style="margin-top:1rem">Order Summary</div>
+    <div class="order-summary-mini">
+      ${cart.map(x=>`<div class="order-line"><span>${x.name} × ${x.qty}</span><span>$${(x.price*x.qty).toFixed(2)}</span></div>`).join('')}
+      <div class="order-line"><span>Shipping</span><span>${shipping===0?'Free':'$'+shipping.toFixed(2)}</span></div>
+      <div class="order-line"><span>Tax (8%)</span><span>$${tax.toFixed(2)}</span></div>
+      <div class="order-line total"><span>Total</span><span>$${total.toFixed(2)}</span></div>
+    </div>
+    <button class="place-order-btn" onclick="placeOrder()">Place Order — $${total.toFixed(2)}</button>`;
+  openModal('checkout');
+}
+
+async function placeOrder() {
+  const fields = ['c-name','c-email','c-addr','c-city','c-zip','c-country','c-card','c-exp','c-cvv'];
+  for (const id of fields) { if (!document.getElementById(id).value.trim()) { showToast('Please fill all fields'); return; } }
+  try {
+    const r = await fetch(`${API}/orders`,{
+      method:'POST', headers: authH(),
+      body: JSON.stringify({
+        items:     cart.map(x=>({product_id:x._id, name:x.name, emoji:x.image_emoji||'', price:x.price, quantity:x.qty})),
+        full_name: document.getElementById('c-name').value,
+        email:     document.getElementById('c-email').value,
+        address:   document.getElementById('c-addr').value,
+        city:      document.getElementById('c-city').value,
+        zip_code:  document.getElementById('c-zip').value,
+        country:   document.getElementById('c-country').value,
+      })
+    });
+    const d = await r.json();
+    if (!r.ok) { showToast(d.error||'Order failed'); return; }
+    closeModal('checkout'); openModal('success');
+  } catch { showToast('Server error. Is the backend running?'); }
+}
+
+// ── MODALS ────────────────────────────────────────────────────
+function openModal(name) {
+  if (name==='cart') renderCart();
+  if (name==='auth') switchAuth('login');
+  document.getElementById('modal-'+name).style.display = 'flex';
+}
+function closeModal(name) { document.getElementById('modal-'+name).style.display = 'none'; }
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', e => { if (e.target===bg) bg.style.display='none'; });
+});
+
+function showToast(msg) {
+  document.getElementById('toast-msg').textContent = msg;
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+(function init() {
+  const saved = localStorage.getItem('token');
+  if (saved) {
+    try {
+      const p = JSON.parse(atob(saved.split('.')[1]));
+      if (p.exp * 1000 > Date.now()) { currentUser = {id:p.id,name:p.name,email:p.email}; updateAuthArea(); }
+      else localStorage.removeItem('token');
+    } catch { localStorage.removeItem('token'); }
+  }
+  loadProducts();
+})();
+</script>
+</body>
+</html>

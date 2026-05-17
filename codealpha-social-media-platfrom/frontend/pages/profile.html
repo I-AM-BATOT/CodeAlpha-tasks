@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Profile – ConnectSphere</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+<div id="toast"></div>
+
+<nav class="navbar">
+  <a href="/pages/feed.html" class="brand">
+    <img src="/logo.png" alt="ConnectSphere" style="width:32px;height:32px;border-radius:9px;object-fit:cover"/>
+    <span class="brand-text">ConnectSphere</span>
+  </a>
+  <nav style="display:flex;align-items:center;gap:.25rem;flex-wrap:wrap">
+    <a href="/pages/feed.html">Feed</a>
+    <a href="/pages/profile.html" class="active">Profile</a>
+    <button onclick="logout()">Sign out</button>
+  </nav>
+</nav>
+
+<div class="container">
+  <div id="profileWrap"><div class="spinner"></div></div>
+  <div id="postsWrap"></div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h3>Edit Profile</h3>
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="editUsername"/>
+    </div>
+    <div class="form-group">
+      <label>Bio</label>
+      <textarea id="editBio" placeholder="Tell the world about yourself…"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Profile Picture</label>
+      <input type="file" id="editAvatar" accept="image/*" style="color:var(--text2);font-size:.88rem"/>
+    </div>
+    <p class="error-msg" id="editErr"></p>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.25rem">
+      <button class="btn btn-outline" onclick="closeEditModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProfile()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+  requireAuth().then(ok => { if (!ok) throw 0; });
+
+  const me = getUser();
+  const params = new URLSearchParams(location.search);
+  const profileId = parseInt(params.get('id') || me.id);
+  const isMe = me && me.id === profileId;
+
+  function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  async function loadProfile() {
+    try {
+      const user = await Users.profile(profileId);
+      let isFollowing = false;
+      if (!isMe) {
+        const status = await Follows.status(profileId);
+        isFollowing = status.following;
+      }
+
+      document.getElementById('profileWrap').innerHTML = `
+        <div class="card" style="margin-bottom:1rem;overflow:hidden">
+          <div class="profile-banner"></div>
+          <div class="profile-info">
+            <div class="profile-avatar">
+              ${user.profile_pic ? `<img src="${user.profile_pic}" alt="${esc(user.username)}"/>` : esc(user.username[0].toUpperCase())}
+            </div>
+            <div class="profile-details">
+              <h2>${esc(user.username)}</h2>
+              <p class="bio">${esc(user.bio || 'No bio yet.')}</p>
+              <div class="profile-stats">
+                <div class="stat">
+                  <strong id="followerCount">${user.followers_count}</strong>
+                  <span>Followers</span>
+                </div>
+                <div class="stat">
+                  <strong>${user.following_count}</strong>
+                  <span>Following</span>
+                </div>
+              </div>
+            </div>
+            <div class="profile-actions">
+              ${isMe
+                ? `<button class="btn btn-outline" onclick="openEditModal('${esc(user.username)}','${esc(user.bio||'')}')">✏️ Edit Profile</button>`
+                : `<button class="btn ${isFollowing?'btn-outline':'btn-primary'}" id="followBtn" onclick="toggleFollow(${user.id})">
+                    ${isFollowing ? 'Unfollow' : '+ Follow'}
+                   </button>`}
+            </div>
+          </div>
+        </div>`;
+
+      await loadUserPosts();
+    } catch (e) {
+      document.getElementById('profileWrap').innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div>${e.message}</div>`;
+    }
+  }
+
+  async function loadUserPosts() {
+    const wrap = document.getElementById('postsWrap');
+    wrap.innerHTML = '<div class="spinner"></div>';
+    try {
+      const posts = await Posts.userPosts(profileId);
+      if (!posts.length) {
+        wrap.innerHTML = `<div class="empty"><div class="empty-icon">📝</div>No posts yet</div>`;
+        return;
+      }
+      wrap.innerHTML = '';
+      posts.forEach(p => wrap.appendChild(buildPost(p)));
+    } catch (e) { wrap.innerHTML = `<div class="empty">${e.message}</div>`; }
+  }
+
+  function buildPost(p) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.id = p.id;
+    const isOwner = me && me.id === p.user_id;
+    card.innerHTML = `
+      <div class="post-header">
+        <div class="avatar" style="flex-shrink:0">
+          ${p.profile_pic ? `<img src="${p.profile_pic}" style="width:100%;height:100%;object-fit:cover"/>` : esc(p.username[0].toUpperCase())}
+        </div>
+        <div class="post-meta" style="flex:1">
+          <div class="username">${esc(p.username)}</div>
+          <div class="time">${timeAgo(p.created_at)}</div>
+        </div>
+        ${isOwner ? `<div class="post-actions-top">
+          <button class="btn-ghost" onclick="deletePost(${p.id})" style="font-size:1rem">🗑️</button>
+        </div>` : ''}
+      </div>
+      <div class="post-content">${esc(p.content)}</div>
+      ${p.image ? `<img class="post-image" src="${p.image}" alt="post" loading="lazy"/>` : ''}
+      <div class="post-footer">
+        <button class="like-btn ${p.liked_by_me?'liked':''}" onclick="toggleLike(${p.id},this)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="${p.liked_by_me?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+          <span class="like-count">${p.likes_count}</span>
+        </button>
+        <span style="color:var(--text3);font-size:.85rem;display:flex;align-items:center;gap:.4rem;padding:.5rem .75rem">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          ${p.comments_count}
+        </span>
+      </div>`;
+    return card;
+  }
+
+  async function toggleLike(postId, btn) {
+    try {
+      const res = await Likes.toggle(postId);
+      btn.classList.toggle('liked', res.liked);
+      btn.querySelector('svg').setAttribute('fill', res.liked ? 'currentColor' : 'none');
+      btn.querySelector('.like-count').textContent = res.likes_count;
+    } catch (e) { toast(e.message); }
+  }
+
+  async function deletePost(postId) {
+    if (!confirm('Delete this post?')) return;
+    try {
+      await Posts.delete(postId);
+      const el = document.querySelector(`.card[data-id="${postId}"]`);
+      if (el) { el.style.transition='opacity .2s'; el.style.opacity='0'; setTimeout(()=>el.remove(),200); }
+      toast('Post deleted.');
+    } catch (e) { toast(e.message); }
+  }
+
+  async function toggleFollow(userId) {
+    const btn = document.getElementById('followBtn');
+    try {
+      const res = await Follows.toggle(userId);
+      btn.textContent = res.following ? 'Unfollow' : '+ Follow';
+      btn.className = `btn ${res.following ? 'btn-outline' : 'btn-primary'}`;
+      const fc = document.getElementById('followerCount');
+      if (fc) fc.textContent = res.followers_count;
+    } catch (e) { toast(e.message); }
+  }
+
+  function openEditModal(username, bio) {
+    document.getElementById('editUsername').value = username;
+    document.getElementById('editBio').value = bio;
+    document.getElementById('editErr').textContent = '';
+    document.getElementById('editModal').classList.add('open');
+  }
+  function closeEditModal() { document.getElementById('editModal').classList.remove('open'); }
+
+  async function saveProfile() {
+    const username = document.getElementById('editUsername').value.trim();
+    const bio      = document.getElementById('editBio').value.trim();
+    const avatar   = document.getElementById('editAvatar').files[0];
+    const errEl    = document.getElementById('editErr');
+    errEl.textContent = '';
+    if (!username) { errEl.textContent = 'Username is required.'; return; }
+    const fd = new FormData();
+    fd.append('username', username);
+    fd.append('bio', bio);
+    if (avatar) fd.append('profile_pic', avatar);
+    try {
+      const updated = await Users.update(fd);
+      setUser({ ...me, username: updated.username });
+      closeEditModal();
+      toast('Profile updated! ✨');
+      loadProfile();
+    } catch (e) { errEl.textContent = e.message; }
+  }
+
+  document.getElementById('editModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('editModal')) closeEditModal();
+  });
+
+  loadProfile();
+</script>
+</body>
+</html>

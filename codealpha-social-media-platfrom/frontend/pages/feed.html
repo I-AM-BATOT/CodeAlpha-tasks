@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Feed – ConnectSphere</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+<div id="toast"></div>
+
+<nav class="navbar">
+  <a href="/pages/feed.html" class="brand">
+    <img src="/logo.png" alt="ConnectSphere" style="width:32px;height:32px;border-radius:9px;object-fit:cover"/>
+    <span class="brand-text">ConnectSphere</span>
+  </a>
+  <nav style="display:flex;align-items:center;gap:.25rem;flex-wrap:wrap">
+    <div class="search-wrap">
+      <input type="text" id="searchInput" placeholder="🔍  Search users…"/>
+      <div class="search-results" id="searchResults" style="display:none"></div>
+    </div>
+    <a href="/pages/feed.html" class="active">Feed</a>
+    <a href="/pages/profile.html">Profile</a>
+    <button onclick="logout()">Sign out</button>
+  </nav>
+</nav>
+
+<div class="container">
+
+  <!-- Create Post -->
+  <div class="card" style="padding:1rem">
+    <div style="display:flex;gap:.75rem;align-items:flex-start">
+      <div class="avatar" id="myAvatar" style="width:40px;height:40px;flex-shrink:0"></div>
+      <textarea id="postContent" placeholder="What's on your mind?" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.75rem 1rem;color:var(--text);font-family:inherit;font-size:.95rem;resize:none;min-height:80px;transition:border-color .2s,box-shadow .2s" onfocus="this.style.borderColor='var(--primary)';this.style.boxShadow='0 0 0 3px var(--primary-glow)'" onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'"></textarea>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:.75rem;padding-left:52px">
+      <label class="btn-ghost" style="cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;font-size:.85rem;padding:.4rem .7rem;border-radius:var(--radius-sm)">
+        📎 <span>Attach image</span>
+        <input type="file" id="postImage" accept="image/*" hidden/>
+      </label>
+      <span id="imgName" style="font-size:.78rem;color:var(--text3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <button class="btn btn-primary" onclick="createPost()" style="padding:.55rem 1.25rem">Post</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" id="tabAll" onclick="switchTab('all')">🌍 For You</button>
+    <button class="tab" id="tabFollowing" onclick="switchTab('following')">👥 Following</button>
+  </div>
+
+  <div id="feed"><div class="spinner"></div></div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h3>Edit Post</h3>
+    <textarea id="editContent" style="width:100%;min-height:120px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.75rem;color:var(--text);font-family:inherit;font-size:.95rem;resize:vertical"></textarea>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
+      <button class="btn btn-outline" onclick="closeEdit()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEdit()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+  requireAuth().then(ok => { if (!ok) throw 0; });
+
+  let currentTab = 'all', editingPostId = null;
+  const me = getUser();
+
+  // Set my avatar
+  const myAv = document.getElementById('myAvatar');
+  if (me) {
+    if (me.profile_pic) {
+      myAv.innerHTML = `<img src="${me.profile_pic}" style="width:100%;height:100%;border-radius:50%;object-fit:cover"/>`;
+    } else {
+      myAv.textContent = (me.username||'?')[0].toUpperCase();
+    }
+  }
+
+  document.getElementById('postImage').addEventListener('change', e => {
+    document.getElementById('imgName').textContent = e.target.files[0]?.name || '';
+  });
+
+  async function loadFeed() {
+    document.getElementById('feed').innerHTML = '<div class="spinner"></div>';
+    try {
+      const posts = currentTab === 'all' ? await Posts.feed() : await Posts.followingFeed();
+      renderPosts(posts);
+    } catch (e) {
+      document.getElementById('feed').innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div>${e.message}</div>`;
+    }
+  }
+
+  function switchTab(tab) {
+    currentTab = tab;
+    document.getElementById('tabAll').classList.toggle('active', tab === 'all');
+    document.getElementById('tabFollowing').classList.toggle('active', tab === 'following');
+    loadFeed();
+  }
+
+  function renderPosts(posts) {
+    const feed = document.getElementById('feed');
+    if (!posts.length) {
+      feed.innerHTML = `<div class="empty"><div class="empty-icon">✨</div><div>Nothing here yet</div><p style="font-size:.85rem;margin-top:.4rem">Be the first to post something!</p></div>`;
+      return;
+    }
+    feed.innerHTML = '';
+    posts.forEach(p => { const el = buildPost(p); feed.appendChild(el); });
+  }
+
+  function buildPost(p) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.id = p.id;
+    const isOwner = me && me.id === p.user_id;
+
+    card.innerHTML = `
+      <div class="post-header">
+        <div class="avatar av-${p.user_id}" onclick="goProfile(${p.user_id})" style="cursor:pointer">
+          ${p.profile_pic ? `<img src="${p.profile_pic}" style="width:100%;height:100%;object-fit:cover"/>` : esc(p.username[0].toUpperCase())}
+        </div>
+        <div class="post-meta">
+          <div class="username" onclick="goProfile(${p.user_id})">${esc(p.username)}</div>
+          <div class="time">${timeAgo(p.created_at)}</div>
+        </div>
+        <div class="post-actions-top">
+          ${isOwner ? `
+            <button class="btn-ghost" onclick="openEdit(${p.id},this)" title="Edit" style="font-size:1rem">✏️</button>
+            <button class="btn-ghost" onclick="deletePost(${p.id})" title="Delete" style="font-size:1rem">🗑️</button>` : ''}
+        </div>
+      </div>
+      <div class="post-content">${esc(p.content)}</div>
+      ${p.image ? `<img class="post-image" src="${p.image}" alt="post image" loading="lazy"/>` : ''}
+      <div class="post-footer">
+        <button class="like-btn ${p.liked_by_me?'liked':''}" onclick="toggleLike(${p.id},this)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="${p.liked_by_me?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+          <span class="like-count">${p.likes_count}</span>
+        </button>
+        <button class="comment-toggle" onclick="toggleComments(${p.id})">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span class="cc">${p.comments_count}</span>
+        </button>
+      </div>
+      <div class="comments-section" id="comments-${p.id}"></div>
+    `;
+    return card;
+  }
+
+  async function toggleLike(postId, btn) {
+    try {
+      const res = await Likes.toggle(postId);
+      btn.classList.toggle('liked', res.liked);
+      btn.querySelector('svg').setAttribute('fill', res.liked ? 'currentColor' : 'none');
+      btn.querySelector('.like-count').textContent = res.likes_count;
+    } catch (e) { toast(e.message); }
+  }
+
+  async function toggleComments(postId) {
+    const sec = document.getElementById(`comments-${postId}`);
+    if (sec.classList.toggle('open')) await loadComments(postId);
+    else sec.innerHTML = '';
+  }
+
+  async function loadComments(postId) {
+    const sec = document.getElementById(`comments-${postId}`);
+    sec.innerHTML = '<div style="padding:.5rem;color:var(--text3);font-size:.85rem">Loading…</div>';
+    try {
+      const comments = await Comments.get(postId);
+      sec.innerHTML = '';
+      if (!comments.length) {
+        sec.innerHTML = '<div style="color:var(--text3);font-size:.85rem;padding:.5rem 0">No comments yet. Be the first!</div>';
+      } else {
+        comments.forEach(c => sec.appendChild(buildComment(c, postId)));
+      }
+      const form = document.createElement('div');
+      form.className = 'comment-form';
+      form.innerHTML = `
+        <div class="avatar" style="width:32px;height:32px;flex-shrink:0;font-size:.75rem">
+          ${me?.profile_pic ? `<img src="${me.profile_pic}" style="width:100%;height:100%;border-radius:50%;object-fit:cover"/>` : (me?.username||'?')[0].toUpperCase()}
+        </div>
+        <input type="text" placeholder="Write a comment…" id="ci-${postId}"/>
+        <button class="btn btn-primary" onclick="submitComment(${postId})" style="padding:.45rem .9rem;font-size:.85rem">Send</button>
+      `;
+      sec.appendChild(form);
+      document.getElementById(`ci-${postId}`).addEventListener('keydown', e => {
+        if (e.key === 'Enter') submitComment(postId);
+      });
+    } catch (e) { sec.innerHTML = `<div style="color:var(--danger);font-size:.85rem">${e.message}</div>`; }
+  }
+
+  function buildComment(c, postId) {
+    const wrap = document.createElement('div');
+    wrap.className = 'comment-item';
+    wrap.dataset.cid = c.id;
+    const isOwner = me && me.id === c.user_id;
+    wrap.innerHTML = `
+      <div class="avatar" onclick="goProfile(${c.user_id})" style="width:32px;height:32px;flex-shrink:0;font-size:.75rem;cursor:pointer">
+        ${c.profile_pic ? `<img src="${c.profile_pic}" style="width:100%;height:100%;border-radius:50%;object-fit:cover"/>` : esc(c.username[0].toUpperCase())}
+      </div>
+      <div class="comment-body">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span class="c-user" onclick="goProfile(${c.user_id})">${esc(c.username)}</span>
+          ${isOwner ? `<button class="btn-ghost" style="font-size:.75rem;padding:.15rem .4rem;color:var(--text3)" onclick="delComment(${c.id},${postId})">✕</button>` : ''}
+        </div>
+        <div class="c-text">${esc(c.content)}</div>
+        <div class="c-time">${timeAgo(c.created_at)}</div>
+      </div>`;
+    return wrap;
+  }
+
+  async function submitComment(postId) {
+    const input = document.getElementById(`ci-${postId}`);
+    const content = input.value.trim();
+    if (!content) return;
+    try {
+      const c = await Comments.add(postId, { content });
+      const sec = document.getElementById(`comments-${postId}`);
+      const form = sec.querySelector('.comment-form');
+      const noComments = sec.querySelector('div:not(.comment-item):not(.comment-form)');
+      if (noComments) noComments.remove();
+      sec.insertBefore(buildComment(c, postId), form);
+      input.value = '';
+      const cc = document.querySelector(`.card[data-id="${postId}"] .cc`);
+      if (cc) cc.textContent = parseInt(cc.textContent) + 1;
+    } catch (e) { toast(e.message); }
+  }
+
+  async function delComment(commentId, postId) {
+    try {
+      await Comments.delete(commentId);
+      document.querySelector(`.comment-item[data-cid="${commentId}"]`)?.remove();
+      const cc = document.querySelector(`.card[data-id="${postId}"] .cc`);
+      if (cc) cc.textContent = Math.max(0, parseInt(cc.textContent) - 1);
+    } catch (e) { toast(e.message); }
+  }
+
+  async function createPost() {
+    const content = document.getElementById('postContent').value.trim();
+    if (!content) { toast('Write something first!'); return; }
+    const fd = new FormData();
+    fd.append('content', content);
+    const img = document.getElementById('postImage').files[0];
+    if (img) fd.append('image', img);
+    try {
+      const post = await Posts.create(fd);
+      document.getElementById('postContent').value = '';
+      document.getElementById('postImage').value = '';
+      document.getElementById('imgName').textContent = '';
+      const feed = document.getElementById('feed');
+      const empty = feed.querySelector('.empty');
+      if (empty) empty.remove();
+      const el = buildPost(post);
+      el.style.opacity = '0';
+      feed.insertBefore(el, feed.firstChild);
+      requestAnimationFrame(() => { el.style.transition = 'opacity .3s'; el.style.opacity = '1'; });
+      toast('Post shared! 🎉');
+    } catch (e) { toast(e.message); }
+  }
+
+  function openEdit(postId, btn) {
+    editingPostId = postId;
+    const card = btn.closest('.card');
+    document.getElementById('editContent').value = card.querySelector('.post-content').textContent.trim();
+    document.getElementById('editModal').classList.add('open');
+  }
+  function closeEdit() {
+    editingPostId = null;
+    document.getElementById('editModal').classList.remove('open');
+  }
+  async function saveEdit() {
+    const content = document.getElementById('editContent').value.trim();
+    if (!content) return;
+    try {
+      await Posts.update(editingPostId, { content });
+      document.querySelector(`.card[data-id="${editingPostId}"] .post-content`).textContent = content;
+      closeEdit(); toast('Post updated.');
+    } catch (e) { toast(e.message); }
+  }
+
+  async function deletePost(postId) {
+    if (!confirm('Delete this post?')) return;
+    try {
+      await Posts.delete(postId);
+      const el = document.querySelector(`.card[data-id="${postId}"]`);
+      if (el) { el.style.transition = 'opacity .2s,transform .2s'; el.style.opacity = '0'; el.style.transform = 'scale(.97)'; setTimeout(() => el.remove(), 200); }
+      toast('Post deleted.');
+    } catch (e) { toast(e.message); }
+  }
+
+  // Search
+  let searchTimer;
+  document.getElementById('searchInput').addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(doSearch, 350);
+  });
+
+  async function doSearch() {
+    const q = document.getElementById('searchInput').value.trim();
+    const box = document.getElementById('searchResults');
+    if (!q) { box.style.display = 'none'; return; }
+    try {
+      const users = await Users.search(q);
+      box.style.display = 'block';
+      if (!users.length) { box.innerHTML = '<div style="padding:.75rem 1rem;color:var(--text3);font-size:.88rem">No users found</div>'; return; }
+      box.innerHTML = users.map(u => `
+        <div class="user-result" onclick="goProfile(${u.id})">
+          <div class="avatar" style="width:36px;height:36px;font-size:.8rem;flex-shrink:0">
+            ${u.profile_pic ? `<img src="${u.profile_pic}" style="width:100%;height:100%;border-radius:50%;object-fit:cover"/>` : esc((u.username||'?')[0].toUpperCase())}
+          </div>
+          <div>
+            <div style="font-weight:600;font-size:.9rem">${esc(u.username)}</div>
+            <div style="font-size:.78rem;color:var(--text3)">${esc(u.bio||'No bio')}</div>
+          </div>
+        </div>`).join('');
+    } catch(e) { box.style.display = 'none'; }
+  }
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#searchResults') && !e.target.closest('#searchInput'))
+      document.getElementById('searchResults').style.display = 'none';
+  });
+
+  document.getElementById('editModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('editModal')) closeEdit();
+  });
+
+  function goProfile(uid) { window.location.href = `/pages/profile.html?id=${uid}`; }
+  function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  loadFeed();
+</script>
+</body>
+</html>
