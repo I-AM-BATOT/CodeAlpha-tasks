@@ -173,7 +173,6 @@ Through these projects, I gained hands-on experience in:
 - Full Stack Developer
 - AI & Machine Learning Enthusiast
 
-GitHub: https://github.com/YOUR_USERNAME
 
 ---
 
